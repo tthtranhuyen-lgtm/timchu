@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vườn Kẹo Ngọt - Tìm Chữ Khác Biệt</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+
+        :root {
+            --grid-gap: 4px;
+            --cols: 3;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #ffe259 0%, #ffa751 100%);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Hiệu ứng bong bóng kẹo ngọt bay lên */
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            z-index: -1;
+            animation: floatUp 8s infinite linear;
+            bottom: -50px;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100vh) scale(1.5); opacity: 0; }
+        }
+
+        header {
+            text-align: center;
+            padding: 15px 20px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 8px 15px rgba(255, 167, 81, 0.3);
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            border-bottom: 4px solid #ff6b6b;
+        }
+
+        .header-title { flex-grow: 1; }
+        h1 { margin: 0; color: #ff6b6b; font-size: 24px; text-shadow: 2px 2px 0px #ffe3e3; }
+        .level-display { font-size: 16px; font-weight: 600; color: #4ecdc4; margin-top: 5px; }
+
+        .sound-btn {
+            background: none; border: none; font-size: 28px; cursor: pointer;
+            padding: 10px; transition: transform 0.2s;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+        .sound-btn:hover { transform: scale(1.2) rotate(10deg); }
+
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(var(--cols), 1fr);
+            gap: var(--grid-gap);
+            background: #fff;
+            padding: 15px;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.3), inset 0 0 0 6px #ffe3e3;
+            width: 100%;
+            max-width: 650px;
+            aspect-ratio: 1 / 1;
+            box-sizing: border-box;
+            border: 4px solid #fff;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fdfdfd;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-size: clamp(16px, 5vw, 45px);
+            color: #2b2d42;
+            font-family: 'KaiTi', 'SimSun', serif;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .cell:hover { background-color: #fff0f5; transform: translateY(-3px) rotate(2deg); }
+        .cell:active { transform: scale(0.9); }
+
+        /* Hiệu ứng khi click sai */
+        .wrong {
+            background-color: #ff6b6b !important;
+            color: white;
+            animation: shake 0.4s;
+        }
+
+        /* Hiệu ứng khi click đúng */
+        .correct {
+            background-color: #4ecdc4 !important;
+            color: white;
+            transform: scale(1.15);
+            box-shadow: 0 0 25px #4ecdc4;
+            z-index: 2;
+            border-radius: 50%; /* Biến thành viên kẹo tròn */
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-6px) rotate(-8deg); }
+            50% { transform: translateX(6px) rotate(8deg); }
+            75% { transform: translateX(-6px) rotate(-8deg); }
+            100% { transform: translateX(0); }
+        }
+
+        /* Màn hình chúc mừng */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .overlay-content {
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(255, 107, 107, 0.4);
+            border: 6px solid #ffa751;
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5) translateY(50px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        button.restart-btn {
+            margin-top: 20px;
+            padding: 15px 35px;
+            font-size: 20px;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 600;
+            background: linear-gradient(135deg, #ff6b6b, #ffa751);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #d65a31;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        button.restart-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 #d65a31;
+        }
+
+        @media (max-width: 600px) {
+            .cell { font-size: clamp(14px, 5vw, 35px); border-radius: 8px; }
+            #board { gap: 2px; padding: 8px; border-radius: 20px; border-width: 2px; }
+            h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>🍬 Vườn Kẹo Ngọt 🍬</h1>
+            <div class="level-display">Màn chơi: <span id="level-text">1</span> / 14</div>
+        </div>
+        <button id="sound-toggle" class="sound-btn" title="Bật/Tắt âm thanh">🔊</button>
+    </header>
+
+    <div class="game-container">
+        <div id="board"></div>
+    </div>
+
+    <div id="overlay">
+        <div class="overlay-content">
+            <h2 style="color: #ff6b6b; font-size: 32px; margin-top: 0;">🎉 TUYỆT VỜI! 🎉</h2>
+            <p style="font-size: 18px; color: #4a4a4a;">Bạn đã tìm ra hết các viên kẹo khác biệt!</p>
+            <p style="font-size: 50px; margin: 10px 0;">🍭🏆🍭</p>
+            <button class="restart-btn" onclick="startGame()">Chơi Lại Nào!</button>
+        </div>
+    </div>
+
+    <script>
+        // --- TẠO BONG BÓNG TRANG TRÍ ---
+        function createBubbles() {
+            const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#ff9f1c'];
+            for(let i=0; i<15; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                const size = Math.random() * 40 + 20;
+                bubble.style.width = size + 'px';
+                bubble.style.height = size + 'px';
+                bubble.style.left = Math.random() * 100 + 'vw';
+                bubble.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                bubble.style.animationDelay = Math.random() * 5 + 's';
+                bubble.style.background = colors[Math.floor(Math.random() * colors.length)];
+                document.body.appendChild(bubble);
+            }
+        }
+        createBubbles();
+
+        // --- CẤU HÌNH ÂM THANH (Web Audio API) ---
+        let audioCtx;
+        let isMuted = false;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol) {
+            if (isMuted || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playSound(type) {
+            initAudio();
+            if (type === 'click') playTone(800, 'sine', 0.05, 0.05);
+            if (type === 'correct') {
+                // Tiếng chuông trong trẻo
+                playTone(1046.50, 'sine', 0.1, 0.2); // C6
+                setTimeout(() => playTone(1318.51, 'sine', 0.3, 0.2), 80); // E6
+            }
+            if (type === 'wrong') {
+                // Tiếng bụp trầm
+                playTone(150, 'triangle', 0.2, 0.3);
+                setTimeout(() => playTone(100, 'triangle', 0.2, 0.3), 100);
+            }
+            if (type === 'win') {
+                // Giai điệu chiến thắng
+                const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => playTone(freq, 'square', 0.2, 0.1), i * 150);
+                });
+            }
+        }
+
+        const soundBtn = document.getElementById('sound-toggle');
+        soundBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            soundBtn.innerText = isMuted ? '🔇' : '🔊';
+            if (!isMuted) playSound('click');
+        });
+
+        // --- CẤU HÌNH 14 CẤP ĐỘ DỰA TRÊN CÁC TỪ ĐÃ CHO ---
+        // Cấu trúc: { cols: số cột, base: chữ đúng, diff: chữ khác biệt cần tìm }
+        const levels = [
+            { cols: 3,  base: "我", diff: "找" }, // Tôi vs Tìm (Dễ nhìn, khác nhiều nét)
+            { cols: 4,  base: "四", diff: "匹" }, // Bốn vs Con ngựa (Khác nét bên trong)
+            { cols: 5,  base: "不", diff: "木" }, // Không vs Cây (Thêm 1 nét)
+            { cols: 6,  base: "去", diff: "云" }, // Đi vs Mây (Khác nét dưới)
+            { cols: 7,  base: "喝", diff: "渴" }, // Uống vs Khát (Khác bộ thủ)
+            { cols: 8,  base: "买", diff: "卖" }, // Mua vs Bán (Khác phần đầu)
+            { cols: 9,  base: "她", diff: "地" }, // Cô ấy vs Đất (Khác bộ thủ)
+            { cols: 10, base: "他", diff: "池" }, // Anh ấy vs Cái ao (Khác bộ thủ)
+            { cols: 11, base: "是", diff: "足" }, // Là vs Chân (Nhìn na ná)
+            { cols: 12, base: "你", diff: "休" }, // Bạn vs Nghỉ ngơi (Khác bộ)
+            { cols: 13, base: "吗", diff: "妈" }, // Trợ từ nghi vấn vs Mẹ (Khác bộ Khẩu/Nữ)
+            { cols: 14, base: "这", diff: "边" }, // Này vs Bên cạnh (Khác bộ)
+            { cols: 15, base: "那", diff: "哪" }, // Kia vs Nào (Thêm bộ Khẩu)
+            { cols: 16, base: "喝", diff: "唱" }  // Uống vs Hát (Nhìn hao hao, chung bộ Khẩu)
+        ];
+
+        let currentLevel = 0;
+        const boardEl = document.getElementById('board');
+        const levelTextEl = document.getElementById('level-text');
+        const overlayEl = document.getElementById('overlay');
+
+        function startGame() {
+            currentLevel = 0;
+            overlayEl.style.display = 'none';
+            initAudio();
+            loadLevel();
+        }
+
+        function loadLevel() {
+            if (currentLevel >= levels.length) {
+                overlayEl.style.display = 'flex';
+                playSound('win');
+                return;
+            }
+
+            const config = levels[currentLevel];
+            levelTextEl.innerText = currentLevel + 1;
+            
+            boardEl.style.setProperty('--cols', config.cols);
+            
+            // Tự động thu nhỏ khoảng cách khi bàn cờ lớn
+            const gap = config.cols > 12 ? 1 : (config.cols > 8 ? 2 : 4);
+            boardEl.style.setProperty('--grid-gap', gap + 'px');
+
+            boardEl.innerHTML = '';
+            const totalCells = config.cols * config.cols;
+            const diffIndex = Math.floor(Math.random() * totalCells);
+
+            for (let i = 0; i < totalCells; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                
+                if (i === diffIndex) {
+                    cell.innerText = config.diff;
+                    cell.dataset.isDiff = "true";
+                } else {
+                    cell.innerText = config.base;
+                    cell.dataset.isDiff = "false";
+                }
+
+                cell.addEventListener('click', handleCellClick);
+                boardEl.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(e) {
+            const cell = e.target;
+            const isDiff = cell.dataset.isDiff === "true";
+
+            if (isDiff) {
+                playSound('correct');
+                cell.classList.add('correct');
+                // Khóa click các ô khác để không bấm linh tinh
+                document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'none');
+                
+                setTimeout(() => {
+                    currentLevel++;
+                    loadLevel();
+                }, 600);
+            } else {
+                playSound('wrong');
+                cell.classList.add('wrong');
+                setTimeout(() => {
+                    cell.classList.remove('wrong');
+                }, 400);
+            }
+        }
+
+        window.onload = startGame;
+    </script>
+</body>
+</html>
